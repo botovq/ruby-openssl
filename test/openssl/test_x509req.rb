@@ -13,9 +13,9 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
     @dn = OpenSSL::X509::Name.parse("/DC=org/DC=ruby-lang/CN=GOTOU Yuuzou")
   end
 
-  def issue_csr(ver, dn, key, digest)
+  def issue_csr(dn, key, digest)
     req = OpenSSL::X509::Request.new
-    req.version = ver
+    req.version = 0
     req.subject = dn
     req.public_key = key.public_key
     req.sign(key, digest)
@@ -23,26 +23,26 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
   end
 
   def test_public_key
-    req = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
+    req = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
     assert_equal(@rsa1024.public_key.to_der, req.public_key.to_der)
     req = OpenSSL::X509::Request.new(req.to_der)
     assert_equal(@rsa1024.public_key.to_der, req.public_key.to_der)
 
-    req = issue_csr(0, @dn, @dsa512, OpenSSL::Digest.new('SHA256'))
+    req = issue_csr(@dn, @dsa512, OpenSSL::Digest.new('SHA256'))
     assert_equal(@dsa512.public_key.to_der, req.public_key.to_der)
     req = OpenSSL::X509::Request.new(req.to_der)
     assert_equal(@dsa512.public_key.to_der, req.public_key.to_der)
   end
 
   def test_version
-    req = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
+    req = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
     assert_equal(0, req.version)
     req = OpenSSL::X509::Request.new(req.to_der)
     assert_equal(0, req.version)
   end
 
   def test_subject
-    req = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
+    req = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
     assert_equal(@dn.to_der, req.subject.to_der)
     req = OpenSSL::X509::Request.new(req.to_der)
     assert_equal(@dn.to_der, req.subject.to_der)
@@ -73,9 +73,9 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
       OpenSSL::X509::Attribute.new("msExtReq", attrval),
     ]
 
-    req0 = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
+    req0 = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
     attrs.each{|attr| req0.add_attribute(attr) }
-    req1 = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
+    req1 = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
     req1.attributes = attrs
     assert_equal(req0.to_der, req1.to_der)
 
@@ -96,7 +96,7 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
   end
 
   def test_sign_and_verify_rsa_sha1
-    req = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA1'))
+    req = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA1'))
     assert_equal(true,  req.verify(@rsa1024))
     assert_equal(false, req.verify(@rsa2048))
     assert_equal(false, request_error_returns_false { req.verify(@dsa256) })
@@ -107,7 +107,7 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
   end
 
   def test_sign_and_verify_rsa_md5
-    req = issue_csr(0, @dn, @rsa2048, OpenSSL::Digest.new('MD5'))
+    req = issue_csr(@dn, @rsa2048, OpenSSL::Digest.new('MD5'))
     assert_equal(false, req.verify(@rsa1024))
     assert_equal(true,  req.verify(@rsa2048))
     assert_equal(false, request_error_returns_false { req.verify(@dsa256) })
@@ -118,7 +118,7 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
   end
 
   def test_sign_and_verify_dsa
-    req = issue_csr(0, @dn, @dsa512, OpenSSL::Digest.new('SHA256'))
+    req = issue_csr(@dn, @dsa512, OpenSSL::Digest.new('SHA256'))
     assert_equal(false, request_error_returns_false { req.verify(@rsa1024) })
     assert_equal(false, request_error_returns_false { req.verify(@rsa2048) })
     assert_equal(false, req.verify(@dsa256))
@@ -129,18 +129,18 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
 
   def test_sign_and_verify_dsa_md5
     assert_raise(OpenSSL::X509::RequestError){
-      issue_csr(0, @dn, @dsa512, OpenSSL::Digest.new('MD5')) }
+      issue_csr(@dn, @dsa512, OpenSSL::Digest.new('MD5')) }
   end
 
   def test_dup
-    req = issue_csr(0, @dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
+    req = issue_csr(@dn, @rsa1024, OpenSSL::Digest.new('SHA256'))
     assert_equal(req.to_der, req.dup.to_der)
   end
 
   def test_eq
-    req1 = issue_csr(0, @dn, @rsa1024, "sha256")
-    req2 = issue_csr(0, @dn, @rsa1024, "sha256")
-    req3 = issue_csr(0, @dn, @rsa1024, "sha512")
+    req1 = issue_csr(@dn, @rsa1024, "sha256")
+    req2 = issue_csr(@dn, @rsa1024, "sha256")
+    req3 = issue_csr(@dn, @rsa1024, "sha512")
 
     assert_equal false, req1 == 12345
     assert_equal true, req1 == req2
@@ -148,7 +148,7 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
   end
 
   def test_marshal
-    req = issue_csr(0, @dn, @rsa1024, "sha256")
+    req = issue_csr(@dn, @rsa1024, "sha256")
     deserialized = Marshal.load(Marshal.dump(req))
 
     assert_equal req.to_der, deserialized.to_der
