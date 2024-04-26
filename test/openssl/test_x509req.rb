@@ -39,6 +39,18 @@ class OpenSSL::TestX509Request < OpenSSL::TestCase
     assert_equal(0, req.version)
     req = OpenSSL::X509::Request.new(req.to_der)
     assert_equal(0, req.version)
+
+    # There is no CSR version 2. Recent versions refuse to set it.
+    if openssl?(3, 3, 0) or libressl?(4, 0, 0)
+      assert_raise (OpenSSL::X509::RequestError) {
+        req.version = 1
+      }
+    else
+      req.version = 1
+    end
+
+    # The only specified version 1 can always be set.
+    req.version = 0
   end
 
   def test_subject
